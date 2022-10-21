@@ -18,7 +18,8 @@ from .Constants import (
     SPECIAL_NAME_PREFIX_ICON_ONLY,
     SPECIAL_NAME_PREFIX_NOTVISIBLE,
     SPECIAL_NAME_PREFIX_NOTCOLLIDABLE,
-    WAYPOINT_VALID_NAMES
+    WAYPOINT_VALID_NAMES,
+    UV_LAYER_NAME_BASEMATERIAL,
 )
 from .Functions import (
     create_folder_if_necessary,
@@ -186,6 +187,7 @@ def _export_item_FBX(item: ExportedItem) -> None:
         "use_custom_props":     True,
         "apply_unit_scale":     False,
     }
+    evaluated = bpy.context.evaluated_depsgraph_get().objects
 
     if is_game_maniaplanet():
         exportArgs["apply_scale_options"] = "FBX_SCALE_UNITS"
@@ -194,6 +196,13 @@ def _export_item_FBX(item: ExportedItem) -> None:
     for obj in item.objects:
         if not obj.name.lower().startswith((SPECIAL_NAME_PREFIX_IGNORE, SPECIAL_NAME_PREFIX_ICON_ONLY, "delete")) :
             select_obj(obj)
+        
+            #move BaseMaterial UVs edited in geometry nodes back to being 2D Vector UVs
+            if obj.type == 'MESH':
+                eval_mesh = evaluated[obj.name].data
+                if UV_LAYER_NAME_BASEMATERIAL not in eval_mesh.uv_layers and UV_LAYER_NAME_BASEMATERIAL in eval_mesh.attributes:
+                    eval_mesh.attributes.active = eval_mesh[UV_LAYER_NAME_BASEMATERIAL]
+                    bpy.ops.geometry.attribute_convert(mode='UV_MAP', domain='CORNER', data_types='FLOAT2')
 
     bpy.ops.export_scene.fbx(**exportArgs) #one argument is optional, so give a modified dict and **unpack
 
