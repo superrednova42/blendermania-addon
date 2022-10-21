@@ -208,8 +208,8 @@ def _export_item_FBX(item: ExportedItem) -> None:
                     newuv = [uv.vector.xy for uv in eval_obj.data.attributes[bm].data]
                     for loop in copy.data.loops:
                         copy.data.uv_layers[bm].data[loop.index].uv = newuv[loop.index]
-                    items.objects.remove(obj)
-                    items.objects.append(copy)
+                    item.objects.remove(obj)
+                    item.objects.append(copy)
     
     deselect_all_objects()
     for obj in item.objects:
