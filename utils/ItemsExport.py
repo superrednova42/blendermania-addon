@@ -3,6 +3,7 @@ import re
 import bpy
 from copy import copy
 from shutil import copyfile
+from mathutils import Vector
 
 from .Materials import save_mat_props_json
 
@@ -187,24 +188,38 @@ def _export_item_FBX(item: ExportedItem) -> None:
         "use_custom_props":     True,
         "apply_unit_scale":     False,
     }
-    evaluated = bpy.context.evaluated_depsgraph_get().objects
 
     if is_game_maniaplanet():
         exportArgs["apply_scale_options"] = "FBX_SCALE_UNITS"
 
+    #move BaseMaterial UVs edited in geometry nodes back to being 2D Vector UVs
+    evaluated = bpy.context.evaluated_depsgraph_get().objects
+    replaced_objects = []
+    for obj in item.objects:
+        if not obj.name.lower().startswith((SPECIAL_NAME_PREFIX_IGNORE, SPECIAL_NAME_PREFIX_ICON_ONLY, "delete")) :
+            if obj.type == 'MESH':
+                bm = UV_LAYER_NAME_BASEMATERIAL
+                eval_obj = evaluated.objects[obj.name]
+                if bm not in eval_obj.data.uv_layers and bm in eval_obj.data.attributes:
+                    copy = obj.copy()
+                    replaced_objects.append(copy)
+                    copy.data.attributes.remove(copy.data.attributes[bm])
+                    copy.data.uv_layers.active = copy.data.uv_layers.new(name=bm)
+                    newuv = [uv.vector.xy for uv in eval_obj.data.attributes[bm].data]
+                    for loop in copy.data.loops:
+                        copy.data.uv_layers[bm].data[loop.index].uv = newuv[loop.index]
+                    items.objects.remove(obj)
+                    items.objects.append(copy)
+    
     deselect_all_objects()
     for obj in item.objects:
         if not obj.name.lower().startswith((SPECIAL_NAME_PREFIX_IGNORE, SPECIAL_NAME_PREFIX_ICON_ONLY, "delete")) :
             select_obj(obj)
-        
-            #move BaseMaterial UVs edited in geometry nodes back to being 2D Vector UVs
-            if obj.type == 'MESH':
-                eval_mesh = evaluated[obj.name].data
-                if UV_LAYER_NAME_BASEMATERIAL not in eval_mesh.uv_layers and UV_LAYER_NAME_BASEMATERIAL in eval_mesh.attributes:
-                    eval_mesh.attributes.active = eval_mesh[UV_LAYER_NAME_BASEMATERIAL]
-                    bpy.ops.geometry.attribute_convert(mode='UV_MAP', domain='CORNER', data_types='FLOAT2')
 
     bpy.ops.export_scene.fbx(**exportArgs) #one argument is optional, so give a modified dict and **unpack
+    
+    for obj in replaced_objects:
+        bpy.data.meshes.remove(obj.data)
 
     deselect_all_objects()
 
