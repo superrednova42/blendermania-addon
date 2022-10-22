@@ -193,13 +193,13 @@ def _export_item_FBX(item: ExportedItem) -> None:
         exportArgs["apply_scale_options"] = "FBX_SCALE_UNITS"
 
     #move BaseMaterial UVs edited in geometry nodes back to being 2D Vector UVs
-    evaluated = bpy.context.evaluated_depsgraph_get().objects
+    depsgraph = bpy.context.evaluated_depsgraph_get()
     replaced_objects = []
     for obj in item.objects:
         if not obj.name.lower().startswith((SPECIAL_NAME_PREFIX_IGNORE, SPECIAL_NAME_PREFIX_ICON_ONLY, "delete")) :
             if obj.type == 'MESH':
                 bm = UV_LAYER_NAME_BASEMATERIAL
-                eval_obj = evaluated.objects[obj.name]
+                eval_obj = depsgraph.objects[obj.name]
                 if bm not in eval_obj.data.uv_layers and bm in eval_obj.data.attributes:
                     copy = obj.copy()
                     replaced_objects.append(copy)
