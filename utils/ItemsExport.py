@@ -19,8 +19,7 @@ from .Constants import (
     SPECIAL_NAME_PREFIX_ICON_ONLY,
     SPECIAL_NAME_PREFIX_NOTVISIBLE,
     SPECIAL_NAME_PREFIX_NOTCOLLIDABLE,
-    WAYPOINT_VALID_NAMES,
-    UV_LAYER_NAME_BASEMATERIAL,
+    WAYPOINT_VALID_NAMES
 )
 from .Functions import (
     create_folder_if_necessary,
