@@ -3,7 +3,6 @@ import re
 import bpy
 from copy import copy
 from shutil import copyfile
-from mathutils import Vector
 
 from .Materials import save_mat_props_json
 
@@ -191,39 +190,12 @@ def _export_item_FBX(item: ExportedItem) -> None:
     if is_game_maniaplanet():
         exportArgs["apply_scale_options"] = "FBX_SCALE_UNITS"
 
-    #move BaseMaterial UVs edited in geometry nodes back to being 2D Vector UVs
-    depsgraph = bpy.context.evaluated_depsgraph_get()
-    replaced_objects = []
-    for obj in item.objects:
-        if not obj.name.lower().startswith((SPECIAL_NAME_PREFIX_IGNORE, SPECIAL_NAME_PREFIX_ICON_ONLY, "delete")) :
-            if obj.type == 'MESH':
-                bm = UV_LAYER_NAME_BASEMATERIAL
-                eval_obj = depsgraph.objects[obj.name]
-                if bm not in eval_obj.data.uv_layers and bm in eval_obj.data.attributes:
-                    copy = obj.copy()
-                    copy.data = bpy.data.meshes.new_from_object(eval_obj)
-                    replaced_objects.append((obj,copy))
-                    copy.data.attributes.remove(copy.data.attributes[bm])
-                    copy.data.uv_layers.active = copy.data.uv_layers.new(name=bm)
-                    newuv = [uv.vector.xy for uv in eval_obj.data.attributes[bm].data]
-                    for loop in copy.data.loops:
-                        copy.data.uv_layers[bm].data[loop.index].uv = newuv[loop.index]
-                    bpy.context.scene.collection.objects.link(copy)
-    
-    for objects in replaced_objects:
-        item.objects.remove(objects[0])
-        item.objects.append(objects[1])
-    
-    
     deselect_all_objects()
     for obj in item.objects:
         if not obj.name.lower().startswith((SPECIAL_NAME_PREFIX_IGNORE, SPECIAL_NAME_PREFIX_ICON_ONLY, "delete")) :
             select_obj(obj)
 
     bpy.ops.export_scene.fbx(**exportArgs) #one argument is optional, so give a modified dict and **unpack
-    
-    for objects in replaced_objects:
-        bpy.data.meshes.remove(objects[1].data)
 
     deselect_all_objects()
 
